@@ -1,43 +1,22 @@
-import express from 'express'
+import gpstracker from 'gpstracker'
 
-const server = express()
+const PORT = process.env.PORT || 3500
 
-server.set('port', process.env.PORT || 3500)
-server.use(express.json());
-server.use(express.urlencoded({ extended: false }))
+var server = gpstracker.create().listen(PORT, function(){
+   console.log('listening your gps trackers on port', PORT)
+})
 
-const handleGPSTracking = (req, res) => {
-  console.log({ body: req.body })
-  console.log({ queryParam: req.query })
+server.trackers.on('connected', function(tracker){
 
-  return res.status(200).json({
-    body: req.body,
-    queryParam: req.query
+  console.log('tracker connected with imei:', tracker.imei)
+
+  tracker.on('help me', function(){
+    console.log(tracker.imei + ' pressed the help button!!'.red)
   })
-}
 
-const NotFound = (req, res) => {
-  res.status(204).json({
-    message: 'Ruta no encontrada porfavor ingrese a /'
+  tracker.on('position', function(position){
+    console.log('tracker {' + tracker.imei +  '}: lat', position.lat, 'lng', position.lng)
   })
-}
 
-const HandleErrors = (err, req, res, next) => {
-  console.error(err)
-  res.status(500).json({
-    message: 'Algo salio mal!',
-    error: err
-  })
-}
-
-server.get('/', handleGPSTracking)
-server.post('/', handleGPSTracking)
-server.put('/', handleGPSTracking)
-server.delete('/', handleGPSTracking)
-server.patch('/', handleGPSTracking)
-server.use(NotFound)
-server.use(HandleErrors)
-
-server.listen(server.get('port'), () => {
-  console.log('⚡ Server on port', server.get('port'))
+  tracker.trackEvery(10).seconds()
 })
